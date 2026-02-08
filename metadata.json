@@ -1,0 +1,7 @@
+{
+  "name": "AI Health Companion",
+  "description": "An AI-powered virtual health companion providing personalized advice on symptoms, mental health, and lifestyle tips with verified information.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
