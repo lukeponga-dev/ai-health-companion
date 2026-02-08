@@ -1,4 +1,17 @@
 
+// Define the AIStudio type to avoid conflicts and ensure type consistency.
+export interface AIStudio { // Changed from type to interface to allow for declaration merging
+  hasSelectedApiKey: () => Promise<boolean>;
+  openSelectKey: () => Promise<void>;
+}
+
+declare global {
+  interface Window {
+    // Explicitly reference the AIStudio type from this module to ensure type consistency.
+    aistudio?: AIStudio;
+  }
+}
+
 export enum Role {
   USER = 'user',
   MODEL = 'model',

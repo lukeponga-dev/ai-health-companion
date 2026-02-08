@@ -32,7 +32,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRateMes
   const copyToClipboard = () => {
     navigator.clipboard.writeText(message.text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(2000));
   };
 
   const fetchAudio = async (): Promise<AudioBuffer[]> => {
@@ -102,9 +102,23 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRateMes
     currentSourcesRef.current = sources;
   };
 
-  const formatText = (text: string) => {
-    if (!text || !text.trim()) return null;
-    return text.split('\n').map((line, i) => {
+  // Helper function for inline parsing (bold, inline code)
+  const parseInline = (text: string) => {
+    // Regex to capture bold (**...**) or inline code (`...`)
+    const parts = text.split(/(\*\*.*?\*\*|`[^`]+`)/g); 
+    return parts.map((part, j) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={j} className="font-semibold text-primary-87">{part.slice(2, -2)}</strong>;
+      } else if (part.startsWith('`') && part.endsWith('`')) {
+        return <code key={j} className="bg-ui-bg dark:bg-ui-dark-3 rounded px-1 py-0.5 text-xs font-mono text-tertiary-38">{part.slice(1, -1)}</code>;
+      }
+      return part;
+    });
+  };
+
+  // Helper function to render a block of markdown text (headers, lists, paragraphs)
+  const renderMarkdownBlock = (textBlock: string): React.ReactNode[] => {
+    return textBlock.split('\n').map((line, i) => {
       const trimmed = line.trim();
       if (trimmed.startsWith('###')) {
         return <h3 key={i} className="text-xs font-bold mt-3 mb-1 uppercase tracking-tight opacity-70">{parseInline(trimmed.replace(/^###\s+/, ''))}</h3>;
@@ -125,11 +139,45 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onRateMes
     });
   };
 
-  const parseInline = (text: string) => {
-    return text.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-      if (part.startsWith('**') && part.endsWith('**')) return <strong key={j} className="font-semibold text-primary-87">{part.slice(2, -2)}</strong>;
-      return part;
-    });
+  // Main formatting function to handle interleaved code blocks and markdown
+  const formatText = (fullText: string) => {
+    if (!fullText || !fullText.trim()) return null;
+
+    const contentBlocks: React.ReactNode[] = [];
+    const codeBlockRegex = /(```(\w+)?\n[\s\S]*?\n```)/g; // Captures fenced code blocks and optional language
+
+    let lastIndex = 0;
+    let match;
+
+    while ((match = codeBlockRegex.exec(fullText)) !== null) {
+      const [fullMatch, codeContent, lang] = match;
+      const startIndex = match.index;
+      const endIndex = startIndex + fullMatch.length;
+
+      // Add preceding text as markdown
+      if (startIndex > lastIndex) {
+        const textBlock = fullText.substring(lastIndex, startIndex);
+        contentBlocks.push(...renderMarkdownBlock(textBlock));
+      }
+
+      // Add code block
+      const actualCode = codeContent.replace(/^```(\w+)?\n/, '').replace(/\n```$/, '');
+      contentBlocks.push(
+        <pre key={`code-${startIndex}`} className="bg-ui-dark-0 dark:bg-black/70 rounded-lg p-3 sm:p-4 my-2 text-white overflow-x-auto text-xs font-mono shadow-inner border border-ui-dark-4">
+          {lang && <div className="text-[10px] text-gray-400 uppercase mb-1">{lang}</div>}
+          <code>{actualCode}</code>
+        </pre>
+      );
+      lastIndex = endIndex;
+    }
+
+    // Add any remaining text as markdown
+    if (lastIndex < fullText.length) {
+      const textBlock = fullText.substring(lastIndex);
+      contentBlocks.push(...renderMarkdownBlock(textBlock));
+    }
+
+    return contentBlocks;
   };
 
   return (

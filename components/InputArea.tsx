@@ -105,7 +105,7 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSendMessage, isLoading, 
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
               }}
               onKeyDown={handleKeyDown}
-              placeholder="How can I help you today?"
+              placeholder="Ask me anything..."
               className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-3 px-1 text-[15px] leading-snug max-h-[160px] text-primary-87 placeholder:text-tertiary-38"
               rows={1}
             />

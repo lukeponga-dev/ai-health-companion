@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Chat, GenerateContentResponse } from '@google/genai';
 import { Header } from './components/Header';
@@ -9,8 +9,10 @@ import { InputArea } from './components/InputArea';
 import { ErrorBanner } from './components/ErrorBanner';
 import { MemoryPanel } from './components/MemoryPanel';
 import { HistoryPanel } from './components/HistoryPanel';
+import { ApiKeySelectionDialog } from './components/ApiKeySelectionDialog';
 import { createChatSession, extractSources, sendMultimodalMessage } from './services/gemini';
 import { Message, Role, HealthFact, Conversation, GroundingSource } from './types';
+import { APP_NAME } from './constants'; // Import APP_NAME
 
 const WELCOME_TEXT =
   "How can I help you with your health and wellness today? \n\nI can analyze symptoms, provide nutrition tips, or explain general health topics.";
@@ -65,6 +67,10 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
 
+  // API Key Selection State
+  const [isApiKeySelected, setIsApiKeySelected] = useState(true); // Assume true initially for default key
+  const [showApiKeySelectionDialog, setShowApiKeySelectionDialog] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamTokenRef = useRef(0);
 
@@ -77,13 +83,51 @@ export default function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Check API key status on mount
+  useEffect(() => {
+    const checkKeyStatus = async () => {
+      // Ensure window.aistudio is available and has the necessary method
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setIsApiKeySelected(hasKey);
+        if (!hasKey) {
+          setShowApiKeySelectionDialog(true);
+        }
+      } else {
+        // If aistudio is not available, assume default key is used, and user cannot select custom key
+        setIsApiKeySelected(true); 
+      }
+    };
+    checkKeyStatus();
+  }, []);
+
+  const handleOpenApiKeySelection = useCallback(async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      try {
+        await window.aistudio.openSelectKey();
+        // As per guidelines, assume success and proceed
+        setIsApiKeySelected(true);
+        setShowApiKeySelectionDialog(false);
+        setAppError(null); // Clear any previous API key related errors
+        // Re-initialize chat session to ensure new API key is picked up
+        if (activeChatId) initChat(activeChatId); 
+      } catch (error: any) {
+        setAppError(`Failed to select API key: ${error.message}`);
+        setIsApiKeySelected(false);
+        setShowApiKeySelectionDialog(true); // Keep dialog open on selection failure
+      }
+    } else {
+      setAppError("API key selection is not available in this environment.");
+    }
+  }, [activeChatId, conversations, memories]); // Add relevant dependencies
+
   const activeConversation = useMemo(() => {
     return conversations.find((c) => c.id === activeChatId) || null;
   }, [conversations, activeChatId]);
 
   const memoryTexts = useMemo(() => memories.map((m) => `[${m.category}] ${m.text}`), [memories]);
 
-  const initChat = (targetId: string | null) => {
+  const initChat = useCallback((targetId: string | null) => {
     if (!targetId) return;
     try {
       setAppError(null);
@@ -97,10 +141,15 @@ export default function App() {
     } catch (error: any) {
       setAppError(`Init failed: ${error.message}`);
       setChatSession(null);
+      // If chat session init fails, it might be due to API key
+      if (error?.message?.includes("API key is missing") || error?.message?.includes("Invalid API key")) {
+        setIsApiKeySelected(false);
+        setShowApiKeySelectionDialog(true);
+      }
     }
-  };
+  }, [conversations, memoryTexts]);
 
-  useEffect(() => { if (activeChatId) initChat(activeChatId); }, [activeChatId, memoryTexts.join('||')]);
+  useEffect(() => { if (activeChatId) initChat(activeChatId); }, [activeChatId, memoryTexts.join('||'), initChat]);
 
   const scrollToBottom = () => {
     requestAnimationFrame(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); });
@@ -108,7 +157,7 @@ export default function App() {
 
   useEffect(() => { scrollToBottom(); }, [activeConversation?.messages.length, isBotGenerating]);
 
-  const startNewChat = () => {
+  const startNewChat = useCallback(() => {
     const newId = uuidv4();
     const newConv: Conversation = {
       id: newId,
@@ -119,17 +168,22 @@ export default function App() {
     setConversations((prev) => [newConv, ...prev]);
     setActiveChatId(newId);
     setAppError(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (conversations.length === 0) startNewChat();
     else if (!activeChatId) setActiveChatId(conversations[0]?.id);
-  }, []);
+  }, [conversations, activeChatId, startNewChat]);
 
   const handleSendMessage = async (text: string, image?: string) => {
     const trimmed = text.trim();
     if (!trimmed && !image) return;
     if (!activeChatId || !chatSession) return;
+    if (!isApiKeySelected && window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+      setShowApiKeySelectionDialog(true);
+      setAppError("Please select an API key to continue.");
+      return;
+    }
 
     setAppError(null);
     const userMsgId = uuidv4();
@@ -153,7 +207,12 @@ export default function App() {
     const myStreamToken = ++streamTokenRef.current;
 
     try {
-      const resultStream = await sendMultimodalMessage(chatSession, trimmed, image);
+      // Re-create chat session to ensure latest API key is used
+      const currentChatSession = createChatSession(memoryTexts, activeConversation?.messages
+        .filter((m) => !m.isStreaming && !m.id.startsWith('init'))
+        .map((m) => ({ role: m.role, parts: [{ text: m.text }] })) || []);
+
+      const resultStream = await sendMultimodalMessage(currentChatSession, trimmed, image);
       let fullText = '';
       let extractedSources: GroundingSource[] = [];
 
@@ -185,11 +244,26 @@ export default function App() {
         setConversations((prev) => prev.map((c) => c.id === activeChatId ? { ...c, messages: c.messages.map((m) => m.id === botMsgId ? { ...m, isStreaming: false } : m) } : c));
       }
     } catch (error: any) {
-      if (myStreamToken === streamTokenRef.current) setAppError(error?.message || "Stream error");
+      if (myStreamToken === streamTokenRef.current) {
+        const errorMessage = error?.message || "Stream error";
+        setAppError(errorMessage);
+        if (errorMessage.includes("Requested entity was not found.")) {
+          setIsApiKeySelected(false);
+          setShowApiKeySelectionDialog(true);
+        }
+      }
     } finally {
       if (myStreamToken === streamTokenRef.current) { setIsLoading(false); setIsBotGenerating(false); }
     }
   };
+
+  const handleRenameChat = useCallback((id: string, newTitle: string) => {
+    setConversations(prev => 
+      prev.map(conv => 
+        conv.id === id ? { ...conv, title: newTitle, updatedAt: Date.now() } : conv
+      )
+    );
+  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-ui-bg dark:bg-ui-dark-0 transition-colors">
@@ -200,6 +274,7 @@ export default function App() {
         toggleHistory={() => setIsHistoryOpen((v) => !v)}
         onNewChat={startNewChat}
         hasMemories={memories.length > 0}
+        currentChatTitle={activeConversation?.title || APP_NAME} // Pass dynamic title
       />
 
       <HistoryPanel
@@ -210,6 +285,9 @@ export default function App() {
         onSelectChat={setActiveChatId}
         onDeleteChat={(id) => setConversations(p => p.filter(c => c.id !== id))}
         onNewChat={startNewChat}
+        onRenameChat={handleRenameChat}
+        onOpenApiKeySettings={() => setShowApiKeySelectionDialog(true)}
+        isApiKeySelected={isApiKeySelected}
       />
 
       <MemoryPanel
@@ -247,6 +325,14 @@ export default function App() {
         isLoading={isLoading}
         showSuggestions={(activeConversation?.messages.length || 0) < 3}
       />
+
+      {showApiKeySelectionDialog && (
+        <ApiKeySelectionDialog
+          isOpen={showApiKeySelectionDialog}
+          onClose={() => setShowApiKeySelectionDialog(false)}
+          onSelectKey={handleOpenApiKeySelection}
+        />
+      )}
     </div>
   );
 }

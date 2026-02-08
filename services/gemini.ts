@@ -1,5 +1,5 @@
 import { GoogleGenAI, Chat, GenerateContentResponse, Modality, Type, FunctionDeclaration } from "@google/genai";
-import { getSystemInstruction } from "../constants";
+import { getSystemInstruction } from "../constants"; // Updated import
 import { GroundingSource } from "../types";
 
 // Primary models as per instructions

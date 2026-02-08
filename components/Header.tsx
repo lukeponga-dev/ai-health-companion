@@ -8,6 +8,7 @@ interface HeaderProps {
   toggleHistory: () => void;
   onNewChat: () => void;
   hasMemories: boolean;
+  currentChatTitle: string; // New prop for dynamic chat title
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   toggleHistory,
   onNewChat,
   hasMemories,
+  currentChatTitle, // Destructure new prop
 }) => {
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-ui-border px-3 sm:px-4 py-2 flex items-center justify-between sticky top-0 z-40 dark:bg-ui-dark-1/80 dark:border-ui-dark-3 transition-colors">
@@ -32,7 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="text-brand-primary">
             <HeartPulse className="w-5 h-5" />
           </div>
-          <h1 className="text-[14px] font-bold tracking-tight hidden xs:block">AI Health Companion</h1>
+          {/* Display dynamic chat title */}
+          <h1 className="text-[14px] font-bold tracking-tight hidden xs:block">{currentChatTitle}</h1>
         </div>
       </div>
 
