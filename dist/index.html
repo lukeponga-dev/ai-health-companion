@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" class="">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="description"
+      content="AI Health Companion - Your personal wellness assistant with a professional medical-grade UI."
+    />
+    <meta name="theme-color" content="#080A0C" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI Health Companion | Professional Wellness</title>
+
+    <!-- PWA Manifest and Icons -->
+    <link rel="manifest" href="/assets/manifest-DAEZ2-om.json" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <link rel="apple-touch-startup-image" href="/splash.png" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                primary: '#2673DD',
+                'primary-20': 'rgba(38, 115, 221, 0.2)',
+                'primary-5': 'rgba(38, 115, 221, 0.05)',
+                warning: '#FFBB00',
+                error: '#EE2C4A',
+                success: '#44CC77',
+                jeans: '#55768E',
+              },
+              ui: {
+                bg: '#F0F2F5',
+                panel: '#FAFAFA',
+                border: '#E8E8E8',
+                'dark-0': '#080A0C',
+                'dark-1': '#121417',
+                'dark-2': '#1A1D21',
+                'dark-3': '#222529',
+                'dark-4': '#2C3035',
+                'dark-5': '#32373D',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      h1, h2, h3, h4 { font-family: 'Plus Jakarta Sans', sans-serif; }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+      .text-primary-87 { color: rgba(0, 0, 0, 0.87); }
+      .dark .text-primary-87 { color: rgba(255, 255, 255, 0.87); }
+      
+      .text-secondary-60 { color: rgba(0, 0, 0, 0.60); }
+      .dark .text-secondary-60 { color: rgba(255, 255, 255, 0.60); }
+      
+      .text-tertiary-38 { color: rgba(0, 0, 0, 0.38); }
+      .dark .text-tertiary-38 { color: rgba(255, 255, 255, 0.38); }
+
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+      @keyframes fadeInDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fade-in-down { animation: fadeInDown 0.3s ease-out forwards; }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "react/": "https://esm.sh/react@^19.2.4/",
+        "react": "https://esm.sh/react@^19.2.4",
+        "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
+        "uuid": "https://esm.sh/uuid@^13.0.0",
+        "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
+      }
+    }
+    </script>
+  </head>
+
+  <body class="bg-ui-bg text-primary-87 h-screen overflow-hidden dark:bg-ui-dark-0 transition-colors duration-300">
+    <div id="root" class="h-full relative z-10"></div>
+    <script>
+      // Declare window.aistudio for API Key selection functionality
+      window.aistudio = window.aistudio || {};
+      if (typeof window.aistudio.hasSelectedApiKey === 'undefined') {
+        window.aistudio.hasSelectedApiKey = async () => {
+          // Mock implementation for local development if not in aistudio frame
+          console.warn('window.aistudio.hasSelectedApiKey is not defined. Mocking return value true.');
+          return true; 
+        };
+      }
+      if (typeof window.aistudio.openSelectKey === 'undefined') {
+        window.aistudio.openSelectKey = async () => {
+          // Mock implementation for local development if not in aistudio frame
+          console.warn('window.aistudio.openSelectKey is not defined. Mocking prompt for API key.');
+          const apiKey = prompt("Please enter your API Key (mock):");
+          if (!apiKey) throw new Error("API Key selection cancelled (mock).");
+          // In a real scenario, this would trigger external API key handling
+        };
+      }
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('SW registered: ', registration);
+          }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
+    </script>
+    <script defer src="/assets/index.js"></script>
+  </body>
+</html>
