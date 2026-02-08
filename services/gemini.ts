@@ -1,10 +1,10 @@
-
 import { GoogleGenAI, Chat, GenerateContentResponse, Modality, Type, FunctionDeclaration } from "@google/genai";
 import { getSystemInstruction } from "../constants";
 import { GroundingSource } from "../types";
 
 // Primary models as per instructions
-const CHAT_MODEL = 'gemini-3-pro-preview';
+// Using Gemini 2.5 Flash Lite for high efficiency and cost-effectiveness
+const CHAT_MODEL = 'gemini-flash-lite-latest';
 const PRIMARY_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 const FALLBACK_TTS_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'; 
 
@@ -26,6 +26,8 @@ export const createChatSession = (memories: string[] = [], history: any[] = []):
       tools: [
         { googleSearch: {} }
       ],
+      // The maximum thinking budget for 2.5 Flash and Flash-Lite is 24576.
+      thinkingConfig: { thinkingBudget: 24576 }
     },
     history: history
   });
@@ -46,6 +48,7 @@ export const sendMultimodalMessage = async (
         } 
       }
     ];
+    // sendMessageStream only accepts the 'message' parameter
     return chat.sendMessageStream({ message: { parts } as any });
   }
   return chat.sendMessageStream({ message: text });

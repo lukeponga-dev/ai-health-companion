@@ -31,7 +31,7 @@ It uses verified, evidence‑based information and follows strict safety boundar
 
 ## 🚀 Tech Stack
 
-- **AI Model:** Powered by the **Gemini 3 Pro** reasoning engine for complex health literacy.
+- **AI Model:** Powered by the **Gemini 2.5 Flash Lite** for efficient and cost-effective health literacy.
 - **Speech:** **Gemini 2.5 Flash TTS** for low-latency, natural-sounding audio responses.
 - **Frontend:** **React 19** with **TypeScript** for a robust, modern UI/UX.
 - **Styling:** **Tailwind CSS** for a minimalist, medical-grade aesthetic with dark mode support.
