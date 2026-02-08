@@ -8,7 +8,7 @@ export interface AIStudio { // Changed from type to interface to allow for decla
 declare global {
   interface Window {
     // Explicitly reference the AIStudio type from this module to ensure type consistency.
-    aistudio?: AIStudio;
+    aistudio?: import('./types').AIStudio;
   }
 }
 
